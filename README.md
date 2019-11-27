@@ -1,1 +1,1 @@
-otiti-torino: <https://corradolanera.github.io/otiti-torino/>
+slides: <https://corradolanera.github.io/otiti-pd/>

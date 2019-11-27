@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+  <head>
+    <title>Deep learning algorithms for automatic classification of electronic medical records starting from free text</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Corrado Lanera" />
+    <link href="libs/remark-css/default.css" rel="stylesheet" />
+    <link href="libs/remark-css/default-fonts.css" rel="stylesheet" />
+  </head>
+  <body>
+    <textarea id="source">
+
+class: center, top, and title-slide
+background-image: url("images/bg.png")
+background-position: top
+background-size: contain
+
+
+
+# Deep learning algorithms for&lt;br&gt;automatic classification of&lt;br&gt;electronic medical records&lt;br&gt;starting from free text
+
+**Corrado Lanera**\*&lt;sup&gt;1&lt;/sup&gt;, Elisa Barbieri&lt;sup&gt;2&lt;/sup&gt;, Gianluca Piras&lt;sup&gt;1&lt;/sup&gt;, Giulia Lorenzoni\*&lt;sup&gt;1&lt;/sup&gt;,&lt;br&gt;Arjun Maggie&lt;sup&gt;3&lt;/sup&gt;, Davy Weissenbacher&lt;sup&gt;3&lt;/sup&gt;, Daniele Dona&lt;sup&gt;2&lt;/sup&gt;, Luigi Cantarutti&lt;sup&gt;4&lt;/sup&gt;,&lt;br&gt;Graciela Gonzalez&lt;sup&gt;3&lt;/sup&gt;, Carlo Giaquinto&lt;sup&gt;2,4&lt;/sup&gt;, and Dario Gregori&lt;sup&gt;1&lt;/sup&gt;
+
+.left[
+&lt;small&gt;&lt;small&gt;
+2019/11/21 - @University of Padova&lt;br&gt;
+\*&lt;corrado.lanera@unipd.it&gt;&lt;br&gt;Laboratory of Artificial Intelligence for Medical Sciences
+&lt;/small&gt;&lt;/small&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;
+]
+
+
+.left[
+&lt;small&gt;
+&lt;small&gt;
+&lt;small&gt;
+&lt;small&gt;
+&lt;sup&gt;1&lt;/sup&gt; Unit of Biostatistics, Epidemiology, and Public Health of the Department of Cardiac-Thoracic-Vascular Sciences and Public Health – University of Padova&lt;br&gt;
+&lt;sup&gt;2&lt;/sup&gt; Division of Pediatric Infectious Diseases, Department for Woman and Child Health, University of Padua, Padua, Italy&lt;br&gt;
+&lt;sup&gt;3&lt;/sup&gt; Health Language Processing Center, Institute for Biomedical Informatics of the Perelman School of Medicine – University of Pennsylvania&lt;br&gt;
+&lt;sup&gt;4&lt;/sup&gt; Società Servizi Telematici – Pedianet&lt;br&gt;
+&lt;/small&gt;
+&lt;/small&gt;
+&lt;/small&gt;
+&lt;/small&gt;
+]
+
+
+???
+
+Good moarning, I am Corrado Lanera and I have just finished my third
+year Ph.D. at the Unit of Biostatistics, Epidemiology and Public Health,
+at the University of Padova.
+
+Today I will present you an **overview of the final work** inlcuded in my 
+dissertation, that aims to identify and classsify different types of 
+otitis automatically and using only free-text from prediatric medical 
+reports. 
+
+This is a **joint work with** three other groups:
+ 
+ - the **Pedianet** society which collected and provided the data;
+ - the **Division of Pediatric Infectious Diseases** of the university
+   of Padova which created the gold standard, motivated the study and 
+   analyzed the results from the clinical point of view
+   
+ - and **Health Language Processing Center** at the University of
+   Pennsylvania, in wich I have spent my visiting period during the
+   Ph.D., and where I have developed all the computational aspects of 
+   the analyses
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+---
+class: inverse, middle
+# Outline
+
+1. **Overview**: otitis
+
+1. **Database and Task**: &lt;img src="images/logopedianet.png", width = "20%", align = "center"&gt;
+
+1. **Programming paradigms**: classical and machine learning
+
+1. **Classical text classification** search string and regular expression
+
+1. **Shallow machine learning**: document-text matrix
+
+1. **Neural networks**: basics
+
+1. **Embeddings**: dense representation of text
+
+1. **Deep networks**: convolutions, sequential/recurrent
+
+1. **Task &amp; metrics**: multi-class, scores and human-performances
+
+1. **Analyses plan**: flowchart
+
+1. **Our approach**: architectures explored
+
+1. **Results, final remarks and conclusions**
+
+
+???
+
+So, we will start with a quick overview on the otitis and the importance
+of their classification.
+
+Next, we will describe which classes we are interested to classify and 
+we will explore the main details of the database we used.
+
+To evaluate any models, we need some metrics, so, before to describe the
+flowchart we adopted for the analyses, we will explore teh metrics and 
+the reference we considered.
+
+After that we will show the deep-learning architectures explored and 
+trained to create teh final ensamble model.
+
+At the end we conclude reporting the results achieved, concluding with 
+some highlights.
+
+
+
+
+---
+class: center, middle, inverse
+# **Overview**&lt;br&gt;classification of otitis
+
+
+
+---
+class: middle
+
+&lt;img src="images/Otitis_Media.png", width = "75%", align = "right"&gt;
+
+- one of the most common infections in pediatrics
+  
+- the main cause of antibiotic prescriptions
+
+- challenging diagnosis
+
+- frequently, little attention is paid to the guidelines
+
+- continuing interest in defining the incidence and burden of AOM
+
+.right[
+&lt;br&gt;
+&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;https://commons.wikimedia.org/wiki/File:Otitis_Media.png&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;
+&lt;br&gt;
+&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;\*Marchisio P. et al. "Burden of acute otitis media in primary care pediatrics in Italy: a secondary data analysis from the Pedianet database", **BMC Pediatrics** 2012.&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;
+&lt;br&gt;
+&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;\*Spiro DM, Arnold, DH. "The concept and practice of a wait-and-see approach to acute otitis media.", **Current Opinion in Pediatrics** 2008&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;
+]
+
+
+???
+
+- Otitis media is one of the **most common infections in pediatrics**
+  population.
+
+- It is an **inflamamtion with possible fluid accumulation** in the
+  middle ear
+
+- and there is continuing interest in defining the incidence and the
+  burden of acute cases, being one of the main cause of antibiotics
+  prescriptions in children.
+  
+- This is also highlighted by the **chellenges in the diagnoses** and by 
+the **frequently little attention in following the guidlines**, like the
+**wait-and-see approach** that discourage early antibiotics prescription,
+reducing their usage and the adverse events associated with that.
+
+
+---
+class: center, middle, inverse
+# **Database and Task**&lt;br&gt;&lt;img src="images/logopedianet.png", width = "40%", align = "center"&gt;
+
+
+.center[A. Kao, S. Poteet (2007) **Text Mining: the discovery and the extraction of
+interesting, non-trivial knowledge from free or unstructured
+text.**]
+
+
+---
+class: middle
+
+.center[&lt;img src="images/logopedianet.png", width = "50%"&gt;]
+
+&lt;big&gt;
+**snapshot considerd**: from 1st January 2004 to 23rd August 2017
+
+**records**: `\(6,903,035\)` `\(( 297,373\)` filtered by a search string `\()\)`
+
+**pediatricians**: `\(144\)` (troughout Italy)
+
+**children**: `\(216,976\)`
+
+**fields** (all free-text, Italian-language):
+- diagnosis
+- signs-and-symptoms
+- diary
+- prescription
+- visit description
+- visit result
+
+
+---
+class: middle
+
+&lt;img src="images/barbieri2019.png", width = "32%", align = "right"&gt;
+
+&lt;big&gt;&lt;big&gt;
+
+2019 &lt;img src="images/logopedianet.png", width = "20%", align = "center"&gt; investigation
+
+- data from 2010 to 2015 
+
+- **on primary diagnosis only**
+
+Adding even the diaries in a traditional manual human-driven analysis proved to be 
+**too costly** in terms both of person-time and economic resources
+
+
+It is necessary to develop an **accurate** system able to classify all
+the &lt;img src="images/logopedianet.png", width = "15%", align = "center"&gt; records **automatically** investigating **all the textual
+fields** in the database.
+
+&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;\*Barbieri et.al "Antibiotic prescriptions in acute otitis media and pharyngitis in Italian pediatric outpatients", **Italian J. of Pediatrics** 2019&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;
+
+
+???
+
+Pedianet was investigated in 2019 by Barbieri et.al\* on data from 
+2010 to 2015 for similar task **on primary diagnosis only**: adding even
+the diaries in a traditional manual human-driven analysis proved to be 
+too costly in terms both of person-time (years) and economic resources
+
+It is necessary to develop an **accurate** system able to classify all
+the Pedianet records **automatically** investigating **all the textual
+fields** in the database.
+
+
+
+
+
+
+
+---
+class: center, middle, inverse
+# **Programming paradigms**&lt;br&gt;classical and machine learning
+
+
+
+---
+class: middle, center
+
+
+&lt;img src="images/ml-paradigm.png", align = "center"&gt;
+
+Arthur Samuel (1959). **Machine Learning: Field of study that gives computers the ability to learn without being explicitly programmed.**
+
+
+---
+class: center, middle, inverse
+# **Classical text classification**&lt;br&gt;Search string and regular expression
+
+
+---
+class: center, middle
+
+
+.pull-left[
+# Search string
+
+One or several strings (also called patterns) founded within a larger string or text.
+
+&lt;img src="images/MeSH-example.svg.png", width = 70%,  align = "center"&gt;
+&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;
+&lt;https://upload.wikimedia.org/wikipedia/commons/thumb/8/85/MeSH-example.svg/1024px-MeSH-example.svg.png&gt;
+&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;
+
+
+&lt;img src="images/Boolean_operations_on_shapes_a.png", width = 40%,  align = "center"&gt;
+&lt;img src="images/Boolean_operations_on_shapes_b.png", width = 40%,  align = "center"&gt;
+
+&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;
+&lt;https://it.wikipedia.org/wiki/File:Boolean_operations_on_shapes.png&gt;
+&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;
+]
+
+
+
+.pull-right[
+# Regular expressions
+
+A sequence of characters that define a search pattern
+
+&lt;img src="images/crossword_regex.png",  align = "center"&gt;
+&lt;br&gt;&lt;br&gt;
+&lt;small&gt;&lt;small&gt;&lt;small&gt;
+&lt;https://www.flickr.com/photos/bluesmoon/8458343489/in/photostream/&gt;
+&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;
+]
+
+
+
+
+---
+class: center, middle, inverse
+# **Shallow machine learning**&lt;br&gt;document-text matrix
+---
+class: middle
+
+# Preprocessing
+
+- **removing** (removes noise):
+  - remove non-word text
+  - remove stopwords
+  - strip whitespace
+
+- **merging** (reduce the risk to allow important information to become noise because they are dispersed):
+  - lowering
+  - stemming
+  - lemmatization
+
+- **producing** (from words to “tokens”, i.e. single indivisible piece of information to bring information which could be lost otherwise, e.g. negations):
+  - n-Grams (consecutive sequences of n words)
+
+---
+class: middle
+
+# Sparse representation
+
+&lt;img src="images/1_zFzLwr9kMiuT5FH9TPwd-Q.png", width = 80%  align = "center"&gt;
+
+&lt;small&gt;&lt;small&gt;&lt;small&gt;
+&lt;https://towardsdatascience.com/word-embedding-with-word2vec-and-fasttext-a209c1d3e12c&gt;
+&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;
+
+---
+class: middle
+
+# Document-term matrix
+
+&lt;img src="images/download.png",  align = "center"&gt;
+
+
+---
+class: middle
+
+
+&lt;img src="images/Classification-vs-Regression1.png",  align = "center"&gt;
+
+
+&lt;small&gt;&lt;small&gt;&lt;small&gt;.right[
+&lt;https://vinodsblog.com/2018/11/08/classification-and-regression-demystified-in-machine-learning/&gt;]
+
+
+
+---
+class: middle, center
+
+# (Shallow) Model definition
+.pull-left[
+Logistic regression 
+&lt;img src="images/Exam_pass_logistic_curve.jpeg", width = 65%,  align = "center"&gt;
+
+&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;
+&lt;https://commons.wikimedia.org/wiki/File:Exam_pass_logistic_curve.jpeg&gt;
+&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;
+
+
+k-nearest neighbor
+&lt;img src="images/KnnClassification.svg.png", width = 50%,  align = "center"&gt;
+
+&lt;small&gt;&lt;small&gt;&lt;small&gt;
+&lt;https://it.m.wikipedia.org/wiki/File:KnnClassification.svg&gt;
+&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;
+]
+
+
+.pull-right[
+support-vector machine
+&lt;img src="images/Kernel_Machine.png",  align = "center"&gt;
+
+&lt;small&gt;&lt;small&gt;&lt;small&gt;
+&lt;https://commons.wikimedia.org/wiki/File:Kernel_Machine.png&gt;
+&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;
+
+random forest (decision tree)
+&lt;img src="images/1_e18v-2-EabQTp_Bj92fkYA.png", width = 100%, align = "center"&gt;
+
+&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;
+&lt;https://towardsdatascience.com/random-forests-and-decision-trees-from-scratch-in-python-3e4fa5ae4249&gt;
+]
+
+
+
+
+
+
+
+
+
+
+---
+class: center, middle, inverse
+# **Neural networks**&lt;br&gt;basic structure
+
+---
+class: center, middle
+
+
+# (Artificial) Neuron
+
+&lt;img src="images/neuron.gif", width = 90%, align = "center"&gt;
+
+&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;
+.right[&lt;https://www.cs.iusb.edu/~danav/teach/c463/12_nn.html&gt;]
+&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;
+
+&lt;br&gt;
+&lt;big&gt;
+&lt;big&gt;
+&lt;big&gt;
+&lt;big&gt;
+`\(=g(\sum(w_ia_i))\)`
+
+
+
+---
+class: center, middle
+
+# Fully connect
+&lt;img src="images/fc.png", width = 70%, align = "center"&gt;
+
+&lt;small&gt;&lt;small&gt;&lt;small&gt;
+&lt;https://upload.wikimedia.org/wikipedia/commons/thumb/e/e4/Artificial_neural_network.svg/860px-Artificial_neural_network.svg.png&gt;
+
+
+
+---
+class: top
+
+# .center[Learning]
+
+.center[Tom Mitchell (1998). **Well-posed Learning Problem: A computer program is said to learn from experience E with respect to some task T and some performance measure P, if its performance on T, as measured by P, improves with experience E.**]
+
+&lt;img src="images/deep_gradient.png", align = "center"&gt;
+
+.pull-left[
+1. Random inizialization
+1. Forward propagation
+1. Loss evaluation
+1. Back propagation
+1. Optimization and update
+]
+
+
+.pull-right[
+&lt;img src="images/Gradient_descent.gif", align = "center"&gt;
+]
+&lt;small&gt;&lt;small&gt;&lt;small&gt;.right[
+&lt;https://upload.wikimedia.org/wikipedia/commons/a/a3/Gradient_descent.gif&gt;
+]
+
+
+
+
+
+
+
+
+
+
+---
+class: center, middle, inverse
+# **Embeddings**&lt;br&gt;dense representation of text
+
+---
+class: center, middle
+
+&lt;img src="images/skip-gram.png", width = 70%, align = "center"&gt;
+
+&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;
+.right[&lt;https://www.analyticsvidhya.com/blog/2017/06/word-embeddings-count-word2veec/&gt;]
+&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;
+
+
+---
+class: center, middle
+
+&lt;img src="images/fasttext-example.png", align = "center"&gt;
+
+&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;
+.right[&lt;https://www.tensorflow.org/images/linear-relationships.png&gt;]
+&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;
+
+
+---
+class: center, middle, inverse
+# **Embeddings**&lt;br&gt;sumulation
+
+
+&lt;https://ronxin.github.io/wevi/&gt;
+
+
+---
+class: center, middle, inverse
+# **Deep networks**&lt;br&gt;convolutions, sequential/recurrent
+
+
+---
+class: center, top
+
+# Convolution
+
+&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;
+&lt;img src="images/CNN_example.png", align = "center"&gt;
+
+---
+class: center, top
+
+# Convolution
+
+&lt;br&gt;&lt;br&gt;
+&lt;img src="images/CNN_multiple.png", align = "center"&gt;
+
+
+
+---
+class: center, top
+
+# Sequential/Recurrent
+
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;img src="images/RNN-vs-LSTM-vs-GRU.png", align = "center"&gt;
+
+
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+&lt;small&gt;&lt;small&gt;&lt;small&gt;
+.right[&lt;http://dprogrammer.org/rnn-lstm-gru&gt;]
+
+
+---
+class: center, top
+
+# Sequential/Recurrent
+
+&lt;br&gt;
+&lt;img src="images/RNN-summary.png", align = "center"&gt;
+
+
+
+
+
+---
+class: center, middle, inverse
+# **Task**&lt;br&gt;multi-class classification
+
+
+
+
+---
+class: middle
+
+Based on data provided in the EHRs at the visit level, decide if it reports:
+
+
+&lt;ol start="0"&gt;
+
+&lt;li&gt;whatever other than an otitis case&lt;/li&gt;&lt;br&gt;
+
+&lt;li&gt;an otitis case which is not media (whatever severity)&lt;/li&gt;&lt;br&gt;
+
+&lt;li&gt;a media otitis which is not acute&lt;/li&gt;&lt;br&gt;
+
+&lt;li&gt;&lt;img src="images/aom.jpg", width = "15%", align = "center"&gt;
+  an AOM (w/o tympanic membrane perforation, nor recurrent)&lt;/li&gt;&lt;br&gt;
+  
+&lt;li&gt;&lt;img src="images/aom_perforation.jpg", width = "15%", align = "center"&gt;
+  an AOM with tympanic membrane perforation&lt;/li&gt;&lt;br&gt;
+
+&lt;li&gt;a recurrent AOM&lt;/li&gt;
+&lt;/ol&gt;
+
+.pull-right[
+.footnote[&lt;small&gt;&lt;small&gt;&lt;small&gt;&lt;small&gt;http://otitismedia.hawkelibrary.com&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;&lt;/small&gt;]
+]
+
+
+
+---
+class: center, middle, inverse
+# **Metrics**&lt;br&gt;scores and human-performances
+
+
+
+
+---
+class: middle
+
+Gold-standard definition:
+  - two independent expert annotators (weighted Cohen's Kappa = `\(0.89\)`)
+  - one pediatrician specialized in infectious diseases decided where the experts shown disagreement:*
+
+Expert annotators | Accuracy [%] | Balanced F1 [%]
+:--------------: | :----------: | :-------------:
+       A         |     95.91    |       93.47
+       B         |     95.80    |       90.12
+
+
+.pull-left[
+&lt;big&gt;
+`\(\text{Accuracy} = \frac{|\text{true classified}|}{|\text{records}|}\)`
+
+`\(\text{Balanced F1} = \frac{\text{balanced precision} \cdot \text{balanced recall}}{\text{balanced precision} + \text{balanced recall}}\)`
+
+`\(\text{Balanced precision} = \frac{\sum_{i\in\text{classes}}\frac{|\text{true classified as }i|}{|\text{labelled as }i|}}{|\text{classes}|}\)`
+
+`\(\text{Balanced recall} = \frac{\sum_{i\in\text{classes}}\frac{|\text{true classified as }i|}{|\text{class }i|}}{|\text{classes}|}\)`
+]
+
+.pull-right[&lt;small&gt;&lt;small&gt;
+
+  *Performances reported for the test set.
+  &lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt;
+  .right[&lt;img src="images/Recall-precision.svg.png", width = 67%, align = "center"&gt;]
+  
+&lt;/small&gt;&lt;/small&gt;]
+
+
+
+
+
+
+
+
+---
+class: center, middle, inverse
+# **Analysis plan**&lt;br&gt;flowchart
+
+
+
+---
+class: middle, center
+
+&lt;big&gt;&lt;big&gt;
+# Gold Standard
+
+.pull-left[
+## **Train**
+Years: `\(2004-2007\)`
+
+Records: `\(4,926\)`
+]
+
+.pull-right[
+## **Validation**
+Years: `\(2008-2017\)`
+
+Records: `\(723\)`
+]
+
+## **Test**
+Years: `\(2008-2017\)`
+
+Records: `\(880\)`
+
+&lt;small&gt;
+(NOTE: 4 months of annotatotion, by 2 independent experts)
+
+
+
+---
+class: center, middle
+&lt;img src="images/flowchart_otiti.png", width = "60%", align = "center"&gt;
+
+
+
+
+
+
+
+
+---
+class: center, middle, inverse
+# **Deep-learning approach**&lt;br&gt;architecture explored
+
+
+
+---
+class: top
+
+&lt;img src="images/architectures.png", width = "90%", align = "center"&gt;
+
+
+
+
+
+
+
+
+
+---
+class: center, middle, inverse
+# **Results**
+
+
+
+
+---
+class: middle
+
+Network          | Balanced&lt;br&gt;precision | Balanced&lt;br&gt;recall |  Accuracy | Balanced&lt;br&gt;F1
+---------------- | :-------------------: | :----------------: |  :------: | :------------:
+Simple Embedding |         84.51         |        68.63       |   81.70   |      75.75
+Single Kernel    |         92.60         |       _91.87_      |   94.66   |     _92.23_
+Sequential CNN   |        _95.94_        |        81.26       |   93.64   |      87.99
+Parallel CNN     |       **96.95**       |       _94.78_      | **96.59** |    **95.86**
+Deep CNN         |       **96.38**       |       _93.36_      | **96.25** |    **94.85**
+Ensemble&lt;br&gt;(w/o Simple Embeddings)|**97.03**|   _93.97_      | **96.59** |    **95.47**
+
+.pull-right[
+  \* **Bold face** = over the maximum &lt;br&gt;
+  \* _italic_ = over the mean
+]
+
+  Annotators     | Balanced&lt;br&gt;precision | Balanced&lt;br&gt;recall |  Accuracy | Balanced&lt;br&gt;F1
+:--------------: | :-------------------: | :----------------: |  :------: | :------------:
+       A         |         91.70         |        95.30       |    95.91  |      93.47 
+       B         |         96.33         |        84.66       |    95.80  |      90.12 
+    (mean)       |        (94.02)        |       (89.98)      |   (95.86) |     (91.80)
+
+
+
+
+
+
+
+
+---
+class: center, middle, inverse
+# **Final remarks**
+
+
+
+
+---
+class: middle
+
+.pull-left[
+## .center[Strenghts]
+- embedding: no more needs to hand-craft features
+- deep learning:
+  - automatical detection and modeling of non linearities and
+    interactions
+  - update models w/ new data
+  - use pre-trained or merge multiple models
+  - can take advantage of more data than shallow models
+]
+
+.pull-right[
+## .center[Weakness]
+- our human-performance estimation is not based at the professional levels
+- missing of computational power (i.e, GPUs) for deeper networks, e.g.,
+  recurrent
+]
+
+## .center[Possible improvement]
+
+- improve the gold standard:
+  - quality  (human-performance level)
+  - accuracy (error analyses)
+  - quantity (more training records / active learning)
+- deeper networks / advanced architectures
+- different weighting schemes for the ensamble
+
+---
+class: center, middle, inverse
+# **Conclusions**
+
+
+
+
+---
+class: middle
+
+# Deep Learning Approach to Text-Mining EHR
+
+- Can be used to identifying and classifying diagnosis from (huge
+  ammount of) free text
+  
+- Quality comparable with human-performances
+
+- Trained models can be adopted on other health care databases,
+  different from the original one
+
+- It can improve healthcare research limiting human errors and time,
+speeding up databases interrogations
+
+
+
+
+
+
+
+
+
+---
+class: center, middle, inverse
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+
+# **Thank you&lt;br&gt;for the attention**&lt;br&gt;&lt;br&gt;&lt;br&gt;&lt;br&gt; Questions?
+
+&lt;br&gt;
+&lt;br&gt;
+&lt;br&gt;
+
+&lt;small&gt;&lt;small&gt;&lt;small&gt;Slides created via the R package [**xaringan**](https://github.com/yihui/xaringan) powered by [remark.js](https://remarkjs.com), [**knitr**](http://yihui.name/knitr), and [R Markdown](https://rmarkdown.rstudio.com).
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
